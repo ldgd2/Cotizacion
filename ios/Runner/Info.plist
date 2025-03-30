@@ -52,7 +52,7 @@
 
 
 	<!-- Permisos de acceso a archivos y multimedia -->
-	<key>NSPhotoLibraryUsageDescription</key>
+		<key>NSPhotoLibraryUsageDescription</key>
 	<string>Esta aplicación necesita acceso a tus fotos para guardar y cargar imágenes.</string>
 
 	<key>NSPhotoLibraryAddUsageDescription</key>
@@ -60,6 +60,10 @@
 
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>La aplicación necesita acceso a la carpeta de documentos para guardar archivos.</string>
+
+	<key>UIFileSharingEnabled</key>
+	<true/>
+
 
 </dict>
 </plist>

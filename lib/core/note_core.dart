@@ -108,22 +108,32 @@ class NotesCore {
     );
 
     // Permitir seleccionar carpeta
+        // Permitir seleccionar carpeta
     String? dirPath = await FilePicker.platform.getDirectoryPath(
       dialogTitle: 'Selecciona la carpeta para guardar el recibo',
     );
 
-    if (dirPath == null) return null; // Cancelado
+    if (dirPath == null || !(await Directory(dirPath).exists())) {
+      print("❌ Ruta inválida o no existe: $dirPath");
+      return null;
+    }
 
     // Nombre del archivo limpio
     final sanitizedName = concepto.trim().replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
     final fileName = '$sanitizedName - Recibo.pdf';
     final fullPath = '$dirPath/$fileName';
 
-    final file = File(fullPath);
-    await file.writeAsBytes(await pdf.save());
-
-    return fullPath;
+    try {
+      final file = File(fullPath);
+      await file.writeAsBytes(await pdf.save());
+      print("✅ Recibo guardado en: $fullPath");
+      return fullPath;
+    } catch (e) {
+      print("❌ Error al guardar PDF: $e");
+      return null;
+    }
   }
+
 
   static pw.Widget _infoBox(String title, String value, {bool boldValue = false}) {
     return pw.Container(

@@ -1,0 +1,11 @@
+3/30/2025
+    - Notas
+         las notas no se genera con el logo de la empresa
+         No se genera la firma
+        Plazo de entrega se tiene que escribir en el textbox
+    
+    - Archivos
+        arreglar los permisos de archivos para IOS
+
+    - Imagenes 
+        No se ven las imagenes de la cotizacion y firma

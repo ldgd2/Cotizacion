@@ -12,8 +12,10 @@ import 'screen/note_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Solicitar permisos para almacenamiento
-  await _solicitarPermisos();
+  final context = navigatorKey.currentState?.overlay?.context;
+  if (context != null) {
+    await _solicitarPermisosConDialogo(context);
+  }
 
   final fileManager = FileManagerCore();
   await fileManager.loadRecentFiles();
@@ -28,26 +30,63 @@ void main() async {
   );
 }
 
-Future<void> _solicitarPermisos() async {
-  // Android >= 33 (Tiramisu) usa READ_MEDIA_* en vez de STORAGE
-  if (await Permission.storage.isDenied) {
-    await Permission.storage.request();
+/// Global navigator key para mostrar diálogos desde main
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+Future<void> _solicitarPermisosConDialogo(BuildContext context) async {
+  Future<bool> pedir(Permission permiso, String motivo) async {
+    var status = await permiso.status;
+    if (status.isDenied || status.isRestricted) {
+     final result = await showDialog<bool>(
+  context: context,
+  builder: (context) => AlertDialog(
+    title: const Text("Permiso requerido"),
+    content: Text(motivo),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context, false), // 👈 corregido
+        child: const Text("Cancelar"),
+      ),
+      ElevatedButton(
+        onPressed: () => Navigator.pop(context, true), // 👈 corregido
+        child: const Text("Permitir"),
+      ),
+    ],
+  ),
+);
+
+      if (result == true) {
+        final nuevoEstado = await permiso.request();
+        return nuevoEstado.isGranted;
+      }
+    }
+    return status.isGranted;
   }
 
-  if (await Permission.manageExternalStorage.isDenied) {
-    await Permission.manageExternalStorage.request();
-  }
+  // Android ≥ 13
+  await pedir(Permission.storage, "Necesitamos acceder a tu almacenamiento para guardar archivos de cotización.");
+  await pedir(Permission.manageExternalStorage, "Para acceder a carpetas y archivos fuera de la aplicación.");
+  await pedir(Permission.photos, "Para seleccionar o mostrar imágenes en la cotización.");
 
-  // iOS: opcional pero buena práctica
-  if (await Permission.photos.isDenied) {
-    await Permission.photos.request();
-  }
+  // Mostrar si se negó permanentemente
+  final negados = [
+    Permission.storage,
+    Permission.manageExternalStorage,
+    Permission.photos
+  ].where((p) => p.status == PermissionStatus.permanentlyDenied);
 
-  // Verifica si alguno fue denegado permanentemente
-  if (await Permission.storage.isPermanentlyDenied ||
-      await Permission.manageExternalStorage.isPermanentlyDenied ||
-      await Permission.photos.isPermanentlyDenied) {
-    openAppSettings();
+  if (await Future.any(negados.map((p) => p.isPermanentlyDenied))) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text("Algunos permisos están permanentemente denegados. Ve a configuración."),
+        action: SnackBarAction(
+          label: "Abrir Ajustes",
+          onPressed: () {
+            openAppSettings();
+          },
+        ),
+      ),
+    );
   }
 }
 
@@ -58,6 +97,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Gestión de Cotizaciones',
+      navigatorKey: navigatorKey, // necesario para mostrar diálogos desde main
       theme: ThemeData.dark(),
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
@@ -72,7 +112,6 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const CompanyScreen());
 
           case '/config':
-            // return MaterialPageRoute(builder: (_) => const ConfigScreen());
             return _invalidRoute("ConfigScreen");
 
           case '/notes':
