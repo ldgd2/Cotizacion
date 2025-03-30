@@ -1,0 +1,26 @@
+{
+    "brightness": "light",
+    "primaryColor": "#2196F3",
+    "backgroundColor": "#FFFFFF",
+    "appBarColor": "#2196F3",
+    "textColor": "#000000",
+    "buttonColor": "#2196F3",
+    "buttonTextColor": "#FFFFFF",
+    "fontFamily": "Roboto",
+    "fontSize": 14,
+    "borderRadius": 10,
+    "buttonAnimationDuration": 300,
+    "inputBorderColor": "#CCCCCC",
+    "inputFocusedBorderColor": "#2196F3",
+    "cardColor": "#F5F5F5",
+    "iconColor": "#000000",
+    "glowColor": "#64B5F6",
+    "slideBarColor": "#64B5F6",
+    "checkboxActiveColor": "#2196F3",
+    "cellBorderColor": "#BDBDBD",
+    "swipeAnimationSpeed": 400,
+    "hoverEffectColor": "#BBDEFB",
+    "shadowColor": "#90CAF9",
+    "textShadowColor": "#1976D2"
+  }
+  
