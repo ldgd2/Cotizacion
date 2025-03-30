@@ -1,24 +1,28 @@
+import 'package:cotizacion/screen/note_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'screen/home_screen.dart';
-import 'screen/config_screen.dart';
 import 'screen/company_screen.dart';
-import 'screen/note_screen.dart';
 import 'screen/image_screen.dart';
 import 'screen/price_screen.dart';
 import 'core/fileManager_core.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final fileManager = FileManagerCore();
+  await fileManager.loadRecentFiles();
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => FileManagerCore()),
+        ChangeNotifierProvider(create: (_) => fileManager),
       ],
       child: const MyApp(),
     ),
   );
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -43,8 +47,13 @@ class MyApp extends StatelessWidget {
           case '/config':
            // return MaterialPageRoute(builder: (_) => const ConfigScreen());
 
-          case '/note':
-          // return MaterialPageRoute(builder: (_) => const NoteScreen());
+          case '/notes':
+      if (args is Map<String, dynamic>) {
+        return MaterialPageRoute(
+          builder: (_) => NoteScreen(cotizacion: args),
+        );
+      }
+      return _invalidRoute("NoteScreen");
 
           case '/price':
             if (args is Map<String, dynamic>) {
@@ -85,3 +94,5 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+

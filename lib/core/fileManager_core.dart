@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Directory, File, Platform;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -53,17 +54,7 @@ class FileManagerCore extends ChangeNotifier {
     }
   }
 
-  Future<void> newFile(BuildContext context) async {
-  // 🧠 1. Seleccionar ubicación + nombre
-  String? filePath = await FilePicker.platform.saveFile(
-    dialogTitle: 'Guardar nueva cotización como...',
-    allowedExtensions: ['cotz'],
-    fileName: 'nueva_cotizacion.cotz',
-  );
-
-  if (filePath == null) return; // El usuario canceló
-
-  // 🧱 2. Estructura vacía por defecto
+Future<void> newFile(BuildContext context) async {
   final Map<String, dynamic> cotizacion = {
     "nombre_proyecto": "",
     "nombre_cliente": "",
@@ -80,17 +71,14 @@ class FileManagerCore extends ChangeNotifier {
     "logo": null,
   };
 
-  // 💾 3. Guardar en archivo y actualizar estado
-  await saveToFile(filePath, cotizacion);
-  currentFile = filePath;
-  await addToRecentFiles(filePath);
-  _notify();
-
-  // 🚀 4. Abrir pantalla con la nueva cotización
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    Navigator.pushNamed(context, '/price', arguments: cotizacion);
-  });
+  await saveAsFile(cotizacion); // Esta función ya actualiza currentFile
+  if (currentFile != null) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.pushNamed(context, '/price', arguments: cotizacion);
+    });
+  }
 }
+
 
 
  Future<void> saveFile(Map<String, dynamic> cotizacion) async {
@@ -106,19 +94,29 @@ class FileManagerCore extends ChangeNotifier {
 
   Future<void> saveAsFile(Map<String, dynamic> cotizacion) async {
   final sanitized = _sanitizeCotizacion(cotizacion);
-  String? filePath = await FilePicker.platform.saveFile(
-    dialogTitle: 'Guardar Como',
-    allowedExtensions: ['cotz'],
-    fileName: 'cotizacion.cotz',
-  );
+  String defaultFileName = "cotizacion_${DateTime.now().toIso8601String().replaceAll(RegExp(r'[:.-]'), '_')}.cotz";
 
-  if (filePath != null) {
-    await saveToFile(filePath, sanitized);
-    currentFile = filePath;
-    await addToRecentFiles(filePath);
-    _notify();
+  String? filePath;
+
+  if (kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    filePath = await FilePicker.platform.saveFile(
+      dialogTitle: 'Guardar como...',
+      allowedExtensions: ['cotz'],
+      fileName: defaultFileName,
+    );
+  } else {
+    final dir = await getApplicationDocumentsDirectory();
+    filePath = "${dir.path}/$defaultFileName";
   }
+
+  if (filePath == null) return;
+
+  await saveToFile(filePath, sanitized);
+  currentFile = filePath;
+  await addToRecentFiles(filePath);
+  _notify();
 }
+
 
 
   Future<void> saveToFile(String filePath, Map<String, dynamic> cotizacion) async {
@@ -132,19 +130,21 @@ class FileManagerCore extends ChangeNotifier {
     }
   }
 
-  Future<void> addToRecentFiles(String filePath) async {
-    String fileName = filePath.split('/').last;
+ Future<void> addToRecentFiles(String filePath) async {
+  final fileName = filePath.split('/').last;
+  final timestamp = DateTime.now().toIso8601String();
 
-    recentFiles.removeWhere((file) => file.split('|')[1] == filePath);
-    recentFiles.insert(0, "$fileName|$filePath");
+  recentFiles.removeWhere((line) => line.split('|')[1] == filePath);
+  recentFiles.insert(0, "$fileName|$filePath|$timestamp");
 
-    if (recentFiles.length > 10) {
-      recentFiles = recentFiles.sublist(0, 10);
-    }
-
-    await saveRecentFiles();
-    _notify();
+  if (recentFiles.length > 5) {
+    recentFiles = recentFiles.sublist(0, 5);
   }
+
+  await saveRecentFiles();
+  _notify();
+}
+
 
   Future<void> saveRecentFiles() async {
     final dir = await getDocumentsDirectory();
@@ -233,4 +233,16 @@ class FileManagerCore extends ChangeNotifier {
     print('❌ $message');
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
+
+  List<Map<String, String>> getRecentFilesParsed() {
+  return recentFiles.map((e) {
+    final parts = e.split('|');
+    return {
+      "name": parts[0],
+      "path": parts[1],
+      "date": parts.length > 2 ? parts[2] : "",
+    };
+  }).toList();
+}
+
 }

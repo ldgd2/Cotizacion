@@ -109,167 +109,210 @@ void initState() {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("PDF generado en ${file.path}")));
   }
 
-  Future<void> _save() async {
-  cotizacion["nombre_proyecto"] = proyectoController.text;
-  cotizacion["nombre_cliente"] = clienteController.text;
-  cotizacion["productos"] = productos;
+ Future<void> _save() async {
+  // 🧠 Asegurar sincronización completa antes de guardar
+ cotizacion["nombre_proyecto"] = proyectoController.text;
+cotizacion["nombre_cliente"] = clienteController.text;
+cotizacion["productos"] = productos;
+
+  cotizacion["empresa"] = selectedEmpresa;
 
   final manager = Provider.of<FileManagerCore>(context, listen: false);
-  await manager.saveFile(cotizacion);
+  await manager.saveFile(Map.from(cotizacion)); // 👈 copia limpia
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text("✅ Cotización guardada")),
+  );
 }
 
 
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // COMBO EMPRESA
-        Row(
-          children: [
-            const Text("Empresa:", style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: DropdownButton<String>(
-                isExpanded: true,
-                value: selectedEmpresa != "Seleccionar Empresa" ? selectedEmpresa : null,
-                hint: const Text("Seleccionar Empresa"),
-                items: empresas
-                    .map((e) => DropdownMenuItem<String>(
-                          value: e["nombre"],
-                          child: Text(e["nombre"]),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) _onSelectEmpresa(value);
-                },
-              ),
-            ),
-          ],
+ @override
+Widget build(BuildContext context) {
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      return SingleChildScrollView(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 16,
+          right: 16,
+          top: 16,
         ),
-        const SizedBox(height: 10),
-
-        // LOGO E INFO
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (cotizacion["logo"] != null && File(cotizacion["logo"]).existsSync())
-              Image.file(File(cotizacion["logo"]), width: 80, height: 80, fit: BoxFit.contain),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(cotizacion["empresa"] ?? "", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text(cotizacion["direccion"] ?? ""),
-                  Text(cotizacion["telefono"] ?? ""),
-                  Text(cotizacion["correo"] ?? ""),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // PROYECTO Y CLIENTE
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-  controller: proyectoController,
-  onChanged: (v) => cotizacion["nombre_proyecto"] = v,
-  decoration: const InputDecoration(labelText: "Nombre del Proyecto"),
-),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-  controller: clienteController,
-  onChanged: (v) => cotizacion["nombre_cliente"] = v,
-  decoration: const InputDecoration(labelText: "Nombre del Cliente"),
-),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-
-        // PRODUCTOS
-        Expanded(
-          child: ReorderableListView.builder(
-            itemCount: productos.length,
-            onReorder: (oldIndex, newIndex) {
-              if (newIndex > oldIndex) newIndex--;
-              final item = productos.removeAt(oldIndex);
-              productos.insert(newIndex, item);
-              _calculateTotal();
-              setState(() {});
-            },
-            itemBuilder: (context, index) {
-              return ProductRow(
-                key: ValueKey('producto_$index'),
-                index: index,
-                producto: productos[index],
-                selected: selectedIndices.contains(index),
-                onSelect: (selected) {
-                  setState(() {
-                    selected == true ? selectedIndices.add(index) : selectedIndices.remove(index);
-                  });
-                },
-                onUpdate: (updatedProducto) {
-                    productos[index] = updatedProducto;
-                    _calculateTotal();
-                },
-              );
-            },
-          ),
-        ),
-
-        const SizedBox(height: 10),
-
-        // BOTONES
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text("Total: ${total.toStringAsFixed(2)} Bs", style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ElevatedButton.icon(onPressed: _addProduct, icon: const Icon(Icons.add), label: const Text("Agregar")),
-                ElevatedButton.icon(
-                  onPressed: selectedIndices.isNotEmpty ? _deleteSelected : null,
-                  icon: const Icon(Icons.delete),
-                  label: const Text("Eliminar"),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                // COMBO EMPRESA
+                Row(
+                  children: [
+                    const Text("Empresa:", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: selectedEmpresa != "Seleccionar Empresa" ? selectedEmpresa : null,
+                        hint: const Text("Seleccionar Empresa"),
+                        items: empresas
+                            .map((e) => DropdownMenuItem<String>(
+                                  value: e["nombre"],
+                                  child: Text(e["nombre"]),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) _onSelectEmpresa(value);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.image),
-                  label: const Text("Imágenes y Firma"),
-                  onPressed: () {
-                    final imagenes = List<String>.from(cotizacion["imagenes"] ?? []);
-                    final firma = cotizacion["firma"];
-                    Navigator.pushNamed(context, "/image", arguments: {
-  "imagenes": imagenes,
-  "firma": firma,
-  "onUpdate": (List<String> imgs, String? f) {
-    setState(() {
-      cotizacion["imagenes"] = imgs;
-      cotizacion["firma"] = f;
-    });
-  }
-});
+                const SizedBox(height: 10),
 
-                  },
+                // LOGO E INFO
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (cotizacion["logo"] != null && File(cotizacion["logo"]).existsSync())
+                      Image.file(File(cotizacion["logo"]), width: 80, height: 80, fit: BoxFit.contain),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(cotizacion["empresa"] ?? "", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(cotizacion["direccion"] ?? ""),
+                          Text(cotizacion["telefono"] ?? ""),
+                          Text(cotizacion["correo"] ?? ""),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                ElevatedButton.icon(onPressed: _generatePDF, icon: const Icon(Icons.picture_as_pdf), label: const Text("PDF")),
-                ElevatedButton.icon(onPressed: _save, icon: const Icon(Icons.save), label: const Text("Guardar")),
+                const SizedBox(height: 16),
+
+                // PROYECTO Y CLIENTE
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: proyectoController,
+                        onChanged: (v) => cotizacion["nombre_proyecto"] = v,
+                        decoration: const InputDecoration(labelText: "Nombre del Proyecto"),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: clienteController,
+                        onChanged: (v) => cotizacion["nombre_cliente"] = v,
+                        decoration: const InputDecoration(labelText: "Nombre del Cliente"),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // PRODUCTOS
+                SizedBox(
+                  height: 400, // Altura fija scrollable
+                  child: ReorderableListView.builder(
+                    itemCount: productos.length,
+                    onReorder: (oldIndex, newIndex) {
+                      if (newIndex > oldIndex) newIndex--;
+                      final item = productos.removeAt(oldIndex);
+                      productos.insert(newIndex, item);
+                      _calculateTotal();
+                      setState(() {});
+                    },
+                    itemBuilder: (context, index) {
+                      return ProductRow(
+                        key: ValueKey('producto_$index'),
+                        index: index,
+                        producto: productos[index],
+                        selected: selectedIndices.contains(index),
+                        onSelect: (selected) {
+                          setState(() {
+                            selected == true ? selectedIndices.add(index) : selectedIndices.remove(index);
+                          });
+                        },
+                        onUpdate: (updatedProducto) {
+                          productos[index] = updatedProducto;
+                          _calculateTotal();
+                        },
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // BOTONES
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text("Total: ${total.toStringAsFixed(2)} Bs", style: const TextStyle(fontSize: 18)),
+                    const SizedBox(height: 10),
+                    Wrap(
+  spacing: 12,
+  runSpacing: 8,
+  alignment: WrapAlignment.center,
+  children: [
+    ElevatedButton.icon(
+      onPressed: _addProduct,
+      icon: const Icon(Icons.add),
+      label: const Text("Agregar"),
+    ),
+    ElevatedButton.icon(
+      onPressed: selectedIndices.isNotEmpty ? _deleteSelected : null,
+      icon: const Icon(Icons.delete),
+      label: const Text("Eliminar"),
+      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+    ),
+    ElevatedButton.icon(
+      icon: const Icon(Icons.image),
+      label: const Text("Imágenes y Firma"),
+      onPressed: () {
+        final imagenes = List<String>.from(cotizacion["imagenes"] ?? []);
+        final firma = cotizacion["firma"];
+        Navigator.pushNamed(context, "/image", arguments: {
+          "imagenes": imagenes,
+          "firma": firma,
+          "onUpdate": (List<String> imgs, String? f) {
+            setState(() {
+              cotizacion["imagenes"] = imgs;
+              cotizacion["firma"] = f;
+            });
+          }
+        });
+      },
+    ),
+    ElevatedButton.icon(
+      icon: const Icon(Icons.receipt_long),
+      label: const Text("Recibo de Anticipo"),
+      onPressed: () {
+        Navigator.pushNamed(context, "/notes", arguments: cotizacion);
+      },
+    ),
+    ElevatedButton.icon(
+      onPressed: _generatePDF,
+      icon: const Icon(Icons.picture_as_pdf),
+      label: const Text("PDF"),
+    ),
+    ElevatedButton.icon(
+      onPressed: _save,
+      icon: const Icon(Icons.save),
+      label: const Text("Guardar"),
+    ),
+  ],
+),
+
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
         ),
-      ],
-    );
-  }
+      );
+    },
+  );
+}
 }
