@@ -29,7 +29,10 @@
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UISupportedInterfaceOrientations</key>
-	
+
+
+
+
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
@@ -46,5 +49,17 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+
+	<!-- Permisos de acceso a archivos y multimedia -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Esta aplicación necesita acceso a tus fotos para guardar y cargar imágenes.</string>
+
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Esta aplicación necesita permiso para guardar archivos PDF o imágenes generadas.</string>
+
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>La aplicación necesita acceso a la carpeta de documentos para guardar archivos.</string>
+
 </dict>
 </plist>
