@@ -1,15 +1,20 @@
-import 'package:cotizacion/screen/note_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
+import 'core/fileManager_core.dart';
 import 'screen/home_screen.dart';
 import 'screen/company_screen.dart';
 import 'screen/image_screen.dart';
 import 'screen/price_screen.dart';
-import 'core/fileManager_core.dart';
+import 'screen/note_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ Solicitar permisos para almacenamiento
+  await _solicitarPermisos();
+
   final fileManager = FileManagerCore();
   await fileManager.loadRecentFiles();
 
@@ -23,6 +28,28 @@ void main() async {
   );
 }
 
+Future<void> _solicitarPermisos() async {
+  // Android >= 33 (Tiramisu) usa READ_MEDIA_* en vez de STORAGE
+  if (await Permission.storage.isDenied) {
+    await Permission.storage.request();
+  }
+
+  if (await Permission.manageExternalStorage.isDenied) {
+    await Permission.manageExternalStorage.request();
+  }
+
+  // iOS: opcional pero buena práctica
+  if (await Permission.photos.isDenied) {
+    await Permission.photos.request();
+  }
+
+  // Verifica si alguno fue denegado permanentemente
+  if (await Permission.storage.isPermanentlyDenied ||
+      await Permission.manageExternalStorage.isPermanentlyDenied ||
+      await Permission.photos.isPermanentlyDenied) {
+    openAppSettings();
+  }
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -45,15 +72,16 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const CompanyScreen());
 
           case '/config':
-           // return MaterialPageRoute(builder: (_) => const ConfigScreen());
+            // return MaterialPageRoute(builder: (_) => const ConfigScreen());
+            return _invalidRoute("ConfigScreen");
 
           case '/notes':
-      if (args is Map<String, dynamic>) {
-        return MaterialPageRoute(
-          builder: (_) => NoteScreen(cotizacion: args),
-        );
-      }
-      return _invalidRoute("NoteScreen");
+            if (args is Map<String, dynamic>) {
+              return MaterialPageRoute(
+                builder: (_) => NoteScreen(cotizacion: args),
+              );
+            }
+            return _invalidRoute("NoteScreen");
 
           case '/price':
             if (args is Map<String, dynamic>) {
@@ -85,7 +113,6 @@ class MyApp extends StatelessWidget {
     );
   }
 
-  /// Ruta fallback para errores
   MaterialPageRoute _invalidRoute(String target) {
     return MaterialPageRoute(
       builder: (_) => Scaffold(
@@ -94,5 +121,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-
